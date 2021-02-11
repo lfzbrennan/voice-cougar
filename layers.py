@@ -49,12 +49,12 @@ class ResConvLayer(nn.Module)
 
 ## descriminator block
 class WavenetBlock(nn.Module):
-	def __init__(self, resid_channels = 512, out_channels = 512, gate_channels = 512, kernel_size = 3, n_layers = 10, dilation_factor = 2):
+	def __init__(self, resid_channels = 512, out_channels = 512, gate_channels = 512, kernel_size = 3, n_layers = 8, dilation_factor = 2):
 		super().__init__()
 
 
 		#### input = (B, resid_channels, T)
-		#### output = (B, out_channels, T*4)
+		#### output = (B, out_channels, T)
 		
 		self.conv_layers = nn.ModuleList()
 

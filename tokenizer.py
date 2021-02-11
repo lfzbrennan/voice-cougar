@@ -1,7 +1,7 @@
 import numpy as np 
 import torch
 
-class CustomTokenizer():
+class Tokenizer():
 	def __init__(self, vocab_file):
 
 		self.silence_token = "[NULL]"
