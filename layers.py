@@ -22,17 +22,18 @@ def Conv1d1x1(in_channels, out_channels, bias=True):
 
 		
 class ResConvLayer(nn.Module)
-	def __init__(self, resid_channels, gate_channels, kernel_size, dilation):
+	def __init__(self, resid_channels, gate_channels, skip_channels, kernel_size, dilation):
 		super().__init__()
 
 		# 1d styled convolution
 
-		self.conv = EqualConv1d(resid_channels, gate_channels, kernel_size=kernel_size, dilation=dilation, padding=(kernel_size - 1) // 2 * dilation)
+		self.conv = Conv1d(resid_channels, gate_channels, kernel_size=kernel_size, dilation=dilation, padding=(kernel_size - 1) // 2 * dilation)
 
 		# output convolution
+		self.skip_out = Conv1d1x1(gate_channels // 2, skip_channels)
 		self.conv1x1_out = Conv1d1x1(gate_channels // 2, resid_channels)
 
-	def forward(self, x):
+	def forward(self, x, s):
 		residual = x
 
 		x = self.conv(x)
@@ -43,13 +44,17 @@ class ResConvLayer(nn.Module)
 		x = torch.tanh(xa) * torch.sigmoid(xb)
 
 		# for residual connection
+		skip = x 
+		skip = self.skip_out(skip)
+		s += skip
+
 		x = (self.conv1x1_out(x) + residual) * math.sqrt(0.5)
 
-		return x
+		return x, s
 
 ## descriminator block
 class WavenetBlock(nn.Module):
-	def __init__(self, resid_channels = 512, out_channels = 512, gate_channels = 512, kernel_size = 3, n_layers = 8, dilation_factor = 2):
+	def __init__(self, resid_channels = 512, out_channels = 512, gate_channels = 512, skip_channels=1024, kernel_size = 3, n_layers = 8, dilation_factor = 2):
 		super().__init__()
 
 
@@ -61,14 +66,12 @@ class WavenetBlock(nn.Module):
 		for i in range(n_layers):
 			# add residual layer
 			dilation = dilation_factor ** i
-			self.conv_layers.append(ResConvLayer(resid_channels, gate_channels, kernel_size, dilation))
+			self.conv_layers.append(ResConvLayer(resid_channels, gate_channels, skip_channels, kernel_size, dilation))
 
-		if resid_channels != out_channels:
-			self.conv_layers.append(Conv1d1x1(resid_channels, out_channels))
 
-	def forward(self, x):
+	def forward(self, x, s):
 		for layer in self.conv_layers:
-			x = layer(x)
+			x, s = layer(x, s)
 
-		return x
+		return x, s
 

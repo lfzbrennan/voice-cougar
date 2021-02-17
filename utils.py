@@ -2,7 +2,7 @@ import librosa
 import numpy as np
 
 def load_audio(audio):
-	return librosa.load(audio)[0]
+	return librosa.load(audio, sr=16000)[0]
 
 def get_phn(file, tokenizer):
 	phn_list = []
@@ -16,3 +16,8 @@ def get_phn(file, tokenizer):
 		out[start:end] = phn
 
 	return out
+
+def save_model(save_dir, model):
+	if not os.path.exists(save_dir):
+		os.mkdir(save_dir)
+	torch.save(model, f"{save_dir}/model.pt")

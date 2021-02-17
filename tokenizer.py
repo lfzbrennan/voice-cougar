@@ -7,7 +7,6 @@ class Tokenizer():
 		self.silence_token = "[NULL]"
 		self.break_token = "[BRK]"
 
-
 		self.token2id = {}
 		with open(vocab_file) as f:
 			lines = f.readlines()

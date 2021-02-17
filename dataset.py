@@ -34,28 +34,44 @@ class TIMIT(Dataset):
 
 		random_index = random.randint(len(audio) - self.audio_length)
 		labels, audio = labels[random_index:random_index + self.audio_length], audio[random_index:random_index + self.audio_length]
+		audio = self.normalize_audio(audio)
 
 		if random.choice([0, 1]) == 1:
 			labels, audio = self.add_silence(labels, audio)
 
-		audio = self.normalize_audio(audio)
+		audio = self.add_noise(audio)
+
 		return torch.FloatTensor(audio), torch.IntTensor(labels)
 	def normalize_audio(self, audio):
-		return audio / (2 ** 16)
+		return audio / np.max(np.absolute(audio))
+
 	def add_silence(self, labels, audio):
-		silence_audio = load_audio(random.choice(self.silence_files))
+	
 		silence_length = random.randint(self.audio_length // 4, self.audio_length * 3 // 4)
 
-		silence_index = random.randint(len(silence_audio) - silence_length)
-		silence_audio = silence_audio[silence_index:silence_index + silence_length]
+		audio_index = random.randint(self.audio_length - silence_length)
 		if random.choice([0, 1]) == 1:
-			audio[:silence_index] = silence_audio
-			labels[:silence_index] = self.tokenizer.convert_tokens_to_ids(self.tokenizer.silence_token)
+			audio[:audio_index] = 0
+			labels[:audio_index] = self.tokenizer.convert_tokens_to_ids(self.tokenizer.silence_token)
 		else:
-			audio[silence_index:] = silence_audio
-			labels[silence_index:] = self.tokenizer.convert_tokens_to_ids(self.tokenizer.silence_token)
+			audio[audio_index:] = 0
+			labels[audio_index:] = self.tokenizer.convert_tokens_to_ids(self.tokenizer.silence_token)
 
 		return labels, audio
+
+	def add_noise(self, audio):
+		noise_audio = load_audio(random.choice(self.noise_files))
+		noise_audio = random_loudness(noise_audio)
+
+		random_index = random.randint(0, len(noise_audio) - self.audio_length)
+
+		return audio + noise_audio[random_index:random_index + self.audio_length]
+
+	def random_loudness(self, audio, max_loudness=1):
+		return self.clamp(audio * random.random() * max_loudness)
+
+	def clamp(self, audio, _min=-1, _max=1):
+		return np.clip(audio, _min, _max)
 
 
 	def pad(self, arr, legnth=self.audio_length, pad_value=0):
