@@ -15,11 +15,11 @@ class TIMIT(Dataset):
 
 
 		if self.train:
-			self.files = glob.glob("/u/lab/lfb6ek/datasets/timit/data/TRAIN/**/.PHN", recursive=True)
+			self.files = glob.glob("/u/lab/lfb6ek/datasets/timit/data/TRAIN/**/*.PHN", recursive=True)
 		else:
-			self.files = glob.glob("/u/lab/lfb6ek/datasets/timit/data/TEST/**/.PHN", recursive=True)
+			self.files = glob.glob("/u/lab/lfb6ek/datasets/timit/data/TEST/**/*.PHN", recursive=True)
 
-		self.silence_files = glob.glob("/u/lab/lfb6ek/datasets/timit/data/SILENCE/*.wav")
+		self.noise_files = glob.glob("/u/lab/lfb6ek/datasets/timit/data/SILENCE/*.wav")
 
 		self.tokenizer = Tokenizer("vocab/phn.txt")
 
@@ -29,10 +29,12 @@ class TIMIT(Dataset):
 		phn_file = self.files[idx]
 		wav_file = self.files[idx][:-3] + "WAV.wav"
 
-		labels = self.pad(get_phn(phn_file, self.tokenizer), pad_value=self.tokenizer.convert_tokens_to_ids("[NULL]"))
+		labels = get_phn(phn_file, self.tokenizer)
+		labels = self.pad(labels, pad_value=self.tokenizer.convert_token("[NULL]"))
 		audio = load_audio(wav_file)
+		audio = self.pad(audio)
 
-		random_index = random.randint(len(audio) - self.audio_length)
+		random_index = random.randint(0, len(audio) - self.audio_length)
 		labels, audio = labels[random_index:random_index + self.audio_length], audio[random_index:random_index + self.audio_length]
 		audio = self.normalize_audio(audio)
 
@@ -41,7 +43,10 @@ class TIMIT(Dataset):
 
 		audio = self.add_noise(audio)
 
-		return torch.FloatTensor(audio), torch.IntTensor(labels)
+		assert audio.shape[0] == self.audio_length
+		assert labels.shape[0] == self.audio_length
+
+		return torch.FloatTensor(audio).unsqueeze(0), torch.LongTensor(labels)
 	def normalize_audio(self, audio):
 		return audio / np.max(np.absolute(audio))
 
@@ -49,19 +54,19 @@ class TIMIT(Dataset):
 	
 		silence_length = random.randint(self.audio_length // 4, self.audio_length * 3 // 4)
 
-		audio_index = random.randint(self.audio_length - silence_length)
+		audio_index = random.randint(0, self.audio_length - silence_length)
 		if random.choice([0, 1]) == 1:
 			audio[:audio_index] = 0
-			labels[:audio_index] = self.tokenizer.convert_tokens_to_ids(self.tokenizer.silence_token)
+			labels[:audio_index] = self.tokenizer.token2id[self.tokenizer.silence_token]
 		else:
 			audio[audio_index:] = 0
-			labels[audio_index:] = self.tokenizer.convert_tokens_to_ids(self.tokenizer.silence_token)
+			labels[audio_index:] = self.tokenizer.token2id[self.tokenizer.silence_token]
 
 		return labels, audio
 
 	def add_noise(self, audio):
 		noise_audio = load_audio(random.choice(self.noise_files))
-		noise_audio = random_loudness(noise_audio)
+		noise_audio = self.random_loudness(noise_audio)
 
 		random_index = random.randint(0, len(noise_audio) - self.audio_length)
 
@@ -74,7 +79,7 @@ class TIMIT(Dataset):
 		return np.clip(audio, _min, _max)
 
 
-	def pad(self, arr, legnth=self.audio_length, pad_value=0):
+	def pad(self, arr, pad_value=0):
 		if len(arr) >= self.audio_length:
-			return arr
-		return np.concat((arr, [pad_value] * (self.audio_length - len(arr)))
+			return arr[:self.audio_length]
+		return np.concatenate((arr, [pad_value] * (self.audio_length - len(arr))))

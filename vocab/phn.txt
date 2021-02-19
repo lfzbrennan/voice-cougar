@@ -1,3 +1,4 @@
+b
 d
 g
 p
@@ -21,11 +22,11 @@ ng
 em
 en
 eng
-nx           
+nx
 l
 r
 w
-yacht
+y
 hh
 hv
 el
@@ -56,3 +57,10 @@ h#
 2
 [NULL]
 [BRK]
+bcl
+dcl
+gcl
+pcl
+tck
+kcl
+tcl

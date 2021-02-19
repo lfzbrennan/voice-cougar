@@ -1,3 +1,5 @@
+import torch
+import os
 import librosa
 import numpy as np
 
@@ -7,15 +9,16 @@ def load_audio(audio):
 def get_phn(file, tokenizer):
 	phn_list = []
 	with open(file) as f:
-		for line in f.readlines()
+		for line in f.readlines():
 			start, end, phn = line.split()
-			phn_list.append((start, end, tokenizer.convert_tokens_to_ids(phn)))
+			phn_list.append((int(start), int(end), tokenizer.convert_token(phn)))
 
 	out = np.array([0] * phn_list[-1][1])
 	for start, end, phn in phn_list:
-		out[start:end] = phn
+		for i in range(start, end):
+			out[i] = phn
 
-	return out
+	return np.array(out)
 
 def save_model(save_dir, model):
 	if not os.path.exists(save_dir):

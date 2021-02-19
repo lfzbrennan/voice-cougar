@@ -21,7 +21,7 @@ def Conv1d1x1(in_channels, out_channels, bias=True):
 				  dilation=1, bias=bias)
 
 		
-class ResConvLayer(nn.Module)
+class ResConvLayer(nn.Module):
 	def __init__(self, resid_channels, gate_channels, skip_channels, kernel_size, dilation):
 		super().__init__()
 
@@ -54,7 +54,7 @@ class ResConvLayer(nn.Module)
 
 ## descriminator block
 class WavenetBlock(nn.Module):
-	def __init__(self, resid_channels = 512, out_channels = 512, gate_channels = 512, skip_channels=1024, kernel_size = 3, n_layers = 8, dilation_factor = 2):
+	def __init__(self, gate_channels=512, residual_channels=128, skip_channels=1024, kernel_size = 3, n_layers = 8, dilation_factor = 2):
 		super().__init__()
 
 
@@ -66,7 +66,7 @@ class WavenetBlock(nn.Module):
 		for i in range(n_layers):
 			# add residual layer
 			dilation = dilation_factor ** i
-			self.conv_layers.append(ResConvLayer(resid_channels, gate_channels, skip_channels, kernel_size, dilation))
+			self.conv_layers.append(ResConvLayer(residual_channels, gate_channels, skip_channels, kernel_size, dilation))
 
 
 	def forward(self, x, s):

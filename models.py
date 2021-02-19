@@ -55,3 +55,46 @@ class PHNModel(nn.Module):
 		out = self.final_layer(out)
 
 		return out
+
+class Mapping(nn.Module):
+	def __init__(self, hidden, layers, vocab_size):
+		super().__init__()
+
+		self.lstm = nn.LSTM(input_size=hidden * 2, hidden_size=2, num_layers=layers, bidirectional=True)
+
+		self.vocab_head = nn.Linear(hidden*2, vocab_size)
+		self.timing_head = nn.Linear(hidden*2, 1)
+
+	def head(self, input):
+		vocab = self.vocab_head(input)
+		timing = self.timing_head(input)
+
+		return vocab, timing
+
+	def forward(self, input):
+
+		out, hidden = self.lstm(input)
+		v_out, t_out = self.head(out[-1])
+
+		while True:
+			out, hidden = self.lstm(out, hidden)
+			dv_out, dt_out = self.head(out[-1])
+			v_out = torch.cat((v_out, dv_out))
+			t_out = torch.cat((t_out, dt_out))
+
+		return v_out, t_out
+
+
+
+class PHNMappingModel(nn.Module):
+	def __init__(self, gate_channels=512, residual_channels=128, skip_channels=1024, end_channels=512, vocab_size=None, lstm_hidden=256, lstm_layers=2):
+		super().__init__()
+
+		self.wavenet = PHNModel(gate_channels, residual_channels, skip_channels, end_channels, vocab_size)
+
+		self.mapping = Mapping(lstm_hidden, lstm_layers, vocab_size)
+
+	def forward(self, audio):
+		out = self.wavenet(audio)
+		v_out, t_out = self.mapping(out)
+		return v_out, t_out
